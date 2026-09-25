@@ -212,15 +212,22 @@ function createTools(getState) {
   return [dashboardSummary, searchRecords, proposeChange]
 }
 
+export function getDashboardAgentStatus() {
+  const endpointConfigured = Boolean(process.env.AZURE_OPENAI_ENDPOINT || process.env.AZURE_OPENAI_API_INSTANCE_NAME)
+  const deploymentConfigured = Boolean(process.env.AZURE_OPENAI_DEPLOYMENT_NAME || process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME)
+  const apiKeyConfigured = Boolean(process.env.AZURE_OPENAI_API_KEY)
+  const entraIdEnabled = process.env.AZURE_OPENAI_USE_ENTRA_ID === 'true'
+  return {
+    configured: endpointConfigured && deploymentConfigured && (apiKeyConfigured || entraIdEnabled),
+    endpointConfigured,
+    deploymentConfigured,
+    apiKeyConfigured,
+    entraIdEnabled,
+  }
+}
+
 export function isDashboardAgentConfigured() {
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT || process.env.AZURE_OPENAI_API_INSTANCE_NAME
-  const deployment = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
-  const hasCredential = process.env.AZURE_OPENAI_USE_ENTRA_ID === 'true' || Boolean(process.env.AZURE_OPENAI_API_KEY)
-  return Boolean(
-    hasCredential
-      && endpoint
-      && deployment,
-  )
+  return getDashboardAgentStatus().configured
 }
 
 export function createDashboardAgent(getState) {
@@ -229,6 +236,7 @@ export function createDashboardAgent(getState) {
 
   return {
     isConfigured: isDashboardAgentConfigured,
+    getStatus: getDashboardAgentStatus,
     async respond(messages) {
       if (!isDashboardAgentConfigured()) throw new Error('Dashboard assistant is not configured.')
       if (!agent) {
