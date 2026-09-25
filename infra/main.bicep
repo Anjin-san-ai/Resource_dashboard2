@@ -34,6 +34,9 @@ param eventGridSecret string
 @description('App Service Plan SKU. B1 is the smallest that keeps the app always-on.')
 param planSku string = 'B1'
 
+@description('Create the Event Grid subscription. Only enable AFTER the app is deployed and live — Event Grid validates the webhook endpoint at creation time.')
+param deployEventGrid bool = false
+
 var storageName = toLower(replace('${appName}sa', '-', ''))
 var planName = '${appName}-plan'
 var webhookUrl = 'https://${appName}.azurewebsites.net/api/hooks/blob-changed?secret=${eventGridSecret}'
@@ -107,7 +110,8 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // Event Grid: storage system topic + webhook subscription for BlobCreated.
-resource systemTopic 'Microsoft.EventGrid/systemTopics@2023-12-15-preview' = {
+// Gated on deployEventGrid — create only once the app endpoint is live.
+resource systemTopic 'Microsoft.EventGrid/systemTopics@2023-12-15-preview' = if (deployEventGrid) {
   name: '${appName}-egtopic'
   location: location
   properties: {
@@ -116,7 +120,7 @@ resource systemTopic 'Microsoft.EventGrid/systemTopics@2023-12-15-preview' = {
   }
 }
 
-resource subscription 'Microsoft.EventGrid/systemTopics/eventSubscriptions@2023-12-15-preview' = {
+resource subscription 'Microsoft.EventGrid/systemTopics/eventSubscriptions@2023-12-15-preview' = if (deployEventGrid) {
   parent: systemTopic
   name: '${appName}-blobcreated'
   properties: {
