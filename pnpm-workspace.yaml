@@ -1,3 +1,7 @@
+# Single-package repo; the root is the only package. pnpm 9+ requires a
+# `packages` field whenever this workspace file exists.
+packages:
+  - '.'
 allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
