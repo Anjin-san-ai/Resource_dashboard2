@@ -27,6 +27,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f5f7fb;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0.54)), url('/white.jpg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
   color: #0f172a;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -34,10 +39,10 @@ body {
 .dark body {
   color: #e6e2f5;
   background-color: #0e0a20;
-  /* Deep violet gradient — mirrors the supplied purple dashboard reference. */
-  background-image: radial-gradient(1200px 800px at 15% -10%, #241a4d 0%, rgba(36, 26, 77, 0) 55%),
-    radial-gradient(1000px 700px at 100% 0%, #1a1140 0%, rgba(26, 17, 64, 0) 50%),
-    linear-gradient(180deg, #140f2b 0%, #0e0a20 100%);
+  background-image: linear-gradient(rgba(14, 10, 32, 0.48), rgba(14, 10, 32, 0.48)), url('/images.jpeg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   background-attachment: fixed;
 }
 
