@@ -10,6 +10,7 @@ import CwrStatus from './pages/CWRStatus.jsx'
 import Login from './pages/Login.jsx'
 import ForcePasswordChange from './pages/ForcePasswordChange.jsx'
 import AccessRequests from './pages/AccessRequests.jsx'
+import AgentChat from './components/AgentChat.jsx'
 import { useApp } from './context/AppContext.jsx'
 import { useAuth } from './context/AuthContext.jsx'
 import { useTheme } from './context/ThemeContext.jsx'
@@ -161,6 +162,7 @@ export default function App() {
         </main>
       </div>
 
+      <AgentChat />
       <Toast />
     </div>
   )

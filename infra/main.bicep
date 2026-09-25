@@ -3,7 +3,7 @@
 //
 // Provisions, in one resource group:
 //   - Storage account + blob container (source of truth for the workbook)
-//   - Linux App Service Plan + Web App (Node 20) running the Express BFF
+//   - Linux App Service Plan + Web App (Node 22) running the Express BFF
 //   - System-assigned managed identity on the Web App, granted
 //     "Storage Blob Data Contributor" on the storage account (no secrets)
 //   - An Event Grid system topic on the storage account + a webhook
@@ -78,12 +78,12 @@ resource web 'Microsoft.Web/sites@2023-12-01' = {
     serverFarmId: plan.id
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: 'NODE|20-lts'
+      linuxFxVersion: 'NODE|22-lts'
       alwaysOn: true
       appCommandLine: 'node server/index.js'
       ftpsState: 'Disabled'
       appSettings: [
-        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~20' }
+        { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~22' }
         { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'false' }
         { name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE', value: 'true' }
         { name: 'BLOB_ACCOUNT_URL', value: 'https://${storageName}.blob.${environment().suffixes.storage}' }

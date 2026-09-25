@@ -30,7 +30,7 @@ az deployment group create -g "$RG" -f infra/main.bicep \
 ```
 
 This creates the storage account + `data` container, the Linux App Service
-(Node 20, `node server/index.js`, always-on), grants the app's managed identity
+(Node 22, `node server/index.js`, always-on), grants the app's managed identity
 **Storage Blob Data Contributor** (so no secrets/keys are needed), and wires an
 Event Grid subscription for `BlobCreated` on `data/Community Sheet.xlsx` to
 `https://<app>.azurewebsites.net/api/hooks/blob-changed?secret=<SECRET>`.
@@ -68,7 +68,26 @@ az webapp deploy -g "$RG" -n "$APP" --src-path deploy.zip --type zip
 Browse `https://$APP.azurewebsites.net` and sign in (`admin` / `admin@123` —
 **change this immediately** via the Access Requests admin tools).
 
-## 4. Automated Excel ingestion
+## 4. Configure the dashboard assistant
+
+The floating assistant uses LangChain with an Azure OpenAI chat deployment.
+Create or select an Azure OpenAI resource and deploy a tool-calling chat model,
+then set these values in **App Service → Configuration → Application settings**
+(or with `az webapp config appsettings set`). Keep the API key in the App
+Service setting; never commit it to the repository.
+
+- `AZURE_OPENAI_API_KEY` — key for the Azure OpenAI resource.
+- `AZURE_OPENAI_API_INSTANCE_NAME` — resource name, without the `.openai.azure.com` suffix.
+- `AZURE_OPENAI_API_DEPLOYMENT_NAME` — exact deployment name created for the chat model.
+- `AZURE_OPENAI_MODEL` — underlying model name, such as `gpt-4o-mini` (optional).
+- `AZURE_OPENAI_API_VERSION` — API version (optional; defaults to `2024-10-21`).
+
+Save the settings and restart the App Service. The assistant appears for signed-in
+users and stays unavailable until the required key, resource name, and deployment
+name are configured. It can search dashboard records and stage a proposed create,
+update, or delete; the user must review and apply each change.
+
+## 5. Automated Excel ingestion
 
 Both paths land the same blob (`data/Community Sheet.xlsx`); Event Grid then
 notifies the app, which validates the workbook (required sheets present + parses

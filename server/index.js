@@ -38,6 +38,7 @@ import {
   loadUsers,
   sanitize,
 } from './users.js'
+import { createDashboardAgent } from './agent.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Azure App Service injects PORT; keep API_PORT for existing local scripts.
@@ -112,6 +113,8 @@ function persistAndReload() {
 
 const app = express()
 app.use(express.json())
+const dashboardAgent = createDashboardAgent(() => state)
+const agentCallsByUser = new Map()
 
 // --- Auth (login-based access) ---------------------------------------------
 // Registered before the workbook-load middleware below so login/access-
@@ -334,6 +337,45 @@ app.get('/api/data', (req, res) => {
   res.json(state)
 })
 
+app.get('/api/agent/status', (req, res) => {
+  res.json({ configured: dashboardAgent.isConfigured() })
+})
+
+app.post('/api/agent/chat', (req, res) => {
+  const now = Date.now()
+  const recentCalls = (agentCallsByUser.get(req.user.username) || []).filter((time) => now - time < 60_000)
+  if (recentCalls.length >= 12) {
+    return res.status(429).json({ error: 'Assistant rate limit reached. Try again in a minute.' })
+  }
+  recentCalls.push(now)
+  agentCallsByUser.set(req.user.username, recentCalls)
+
+  const input = req.body?.messages
+  if (!Array.isArray(input) || input.length === 0 || input.length > 12) {
+    return res.status(400).json({ error: 'Send between 1 and 12 chat messages.' })
+  }
+  const messages = input.map((message) => ({
+    role: message?.role,
+    content: typeof message?.content === 'string' ? message.content.trim() : '',
+  }))
+  if (messages.some((message) => !['user', 'assistant'].includes(message.role) || !message.content || message.content.length > 1500)) {
+    return res.status(400).json({ error: 'Each message must be text under 1,500 characters.' })
+  }
+  if (messages.reduce((total, message) => total + message.content.length, 0) > 7000) {
+    return res.status(400).json({ error: 'Conversation is too long. Start a new chat.' })
+  }
+  if (!dashboardAgent.isConfigured()) {
+    return res.status(503).json({ error: 'The dashboard assistant is not configured yet.' })
+  }
+
+  dashboardAgent.respond(messages)
+    .then((result) => res.json(result))
+    .catch((error) => {
+      console.error('[agent] request failed:', error?.message || 'unknown error')
+      res.status(502).json({ error: 'The assistant could not complete that request. Please try again.' })
+    })
+})
+
 // Contractor (CWR) status — read directly from the CWR_List sheet on every
 // request (no caching, no polling). `load()` in the /api middleware above
 // already re-reads "Community Sheet.xlsx" from disk for this request, so
@@ -522,10 +564,33 @@ app.delete('/api/resources/:id', (req, res) => {
 
 // --- Allocations -----------------------------------------------------------
 
+function validateAllocationCapacity(resourceId, hoursAllocated, exceptAllocationId = null) {
+  const resource = state.resources.find((row) => row.id === resourceId)
+  if (!resource) throw new Error('Resource not found')
+  const requestedHours = Number(hoursAllocated)
+  if (!Number.isFinite(requestedHours) || requestedHours <= 0) {
+    throw new Error('Allocated hours must be greater than zero')
+  }
+  const allocatedHours = state.allocations
+    .filter((row) => row.resource_id === resourceId && row.id !== exceptAllocationId)
+    .reduce((total, row) => total + (Number(row.hours_allocated) || 0), 0)
+  const remainingHours = (Number(resource.max_hours) || 0) - allocatedHours
+  if (requestedHours > remainingHours) {
+    throw new Error(`Only ${Math.max(0, remainingHours)} hours remain for ${resource.name}`)
+  }
+}
+
 app.post('/api/allocations', (req, res) => {
   const b = req.body || {}
   const opty = state.optys.find((o) => o.id === b.opty_id)
   const resource = state.resources.find((r) => r.id === b.resource_id)
+  if (!opty) return res.status(400).json({ error: 'Opportunity not found' })
+  if (!resource) return res.status(400).json({ error: 'Resource not found' })
+  try {
+    validateAllocationCapacity(resource.id, b.hours_allocated)
+  } catch (error) {
+    return res.status(400).json({ error: error.message })
+  }
   const row = {
     id: makeId('alloc'),
     opty_id: b.opty_id,
@@ -548,6 +613,18 @@ app.post('/api/allocations', (req, res) => {
 app.put('/api/allocations/:id', (req, res) => {
   const a = state.allocations.find((x) => x.id === req.params.id)
   if (!a) return res.status(404).json({ error: 'not found' })
+  const nextOptyId = req.body.opty_id || a.opty_id
+  const nextResourceId = req.body.resource_id || a.resource_id
+  const nextHours = req.body.hours_allocated !== undefined ? Number(req.body.hours_allocated) : Number(a.hours_allocated)
+  if (!state.optys.some((row) => row.id === nextOptyId)) return res.status(400).json({ error: 'Opportunity not found' })
+  if (!state.resources.some((row) => row.id === nextResourceId)) return res.status(400).json({ error: 'Resource not found' })
+  if (nextResourceId !== a.resource_id || nextHours !== Number(a.hours_allocated)) {
+    try {
+      validateAllocationCapacity(nextResourceId, nextHours, a.id)
+    } catch (error) {
+      return res.status(400).json({ error: error.message })
+    }
+  }
   if (req.body.opty_id && req.body.opty_id !== a.opty_id) {
     const opty = state.optys.find((o) => o.id === req.body.opty_id)
     a.opty_id = req.body.opty_id
