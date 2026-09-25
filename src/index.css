@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+/* Always open the app at 80% browser zoom, regardless of the user's last
+   manual zoom level (Ctrl+/- persists per-origin in most browsers). The
+   `zoom` property is supported in Chromium/Edge/Safari and recent Firefox;
+   it scales layout (not just visuals) so this behaves like real browser
+   zoom rather than a CSS transform. */
+html {
+  zoom: 80%;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f7fb;
+  color: #0f172a;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark body {
+  color: #e6e2f5;
+  background-color: #0e0a20;
+  /* Deep violet gradient — mirrors the supplied purple dashboard reference. */
+  background-image: radial-gradient(1200px 800px at 15% -10%, #241a4d 0%, rgba(36, 26, 77, 0) 55%),
+    radial-gradient(1000px 700px at 100% 0%, #1a1140 0%, rgba(26, 17, 64, 0) 50%),
+    linear-gradient(180deg, #140f2b 0%, #0e0a20 100%);
+  background-attachment: fixed;
+}
+
+/* Thin, subtle scrollbars */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+.dark *::-webkit-scrollbar-thumb {
+  background-color: #3a3168;
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: #4a4080;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-night-700 dark:bg-night-850 dark:shadow-black/30;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-accent-500/50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 dark:bg-accent-600 dark:hover:bg-accent-500;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-night-700;
+  }
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700;
+  }
+  .btn-subtle {
+    @apply btn bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-night-700 dark:text-slate-200 dark:hover:bg-night-600;
+  }
+  .input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-night-600 dark:bg-night-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-accent-500 dark:focus:ring-accent-500/30;
+  }
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  /* Cognizant logo: render white on dark backgrounds (per brand guidance). */
+  .cognizant-logo {
+    @apply h-auto w-auto;
+  }
+  .dark .cognizant-logo {
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
+  }
+}
+
+.animate-in {
+  animation: fadeInUp 0.25s ease-out both;
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

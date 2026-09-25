@@ -1,0 +1,21 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+.DS_Store
+
+# Runtime state — lives in Azure Blob / App Service /home in production,
+# and is local-only data in development. Never commit it.
+Community Sheet*.xlsx
+~$*.xlsx
+users.json
+raw.json
+backups/
+*.log
+
+# Nested sub-project with its own git repo — not part of this app.
+AI_Opty_App/
+
+# Transient Claude Code session artifacts
+.claude/scheduled_tasks.lock
