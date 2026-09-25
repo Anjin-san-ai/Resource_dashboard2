@@ -247,8 +247,8 @@ export function createDashboardAgent(getState) {
         const model = endpoint
           ? new ChatOpenAI({
             model: deployment,
-            temperature: 0,
             maxRetries: 1,
+            useResponsesApi: true,
             apiKey: useEntraId
               ? getBearerTokenProvider(new DefaultAzureCredential(), 'https://ai.azure.com/.default')
               : process.env.AZURE_OPENAI_API_KEY,
