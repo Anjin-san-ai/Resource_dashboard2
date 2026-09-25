@@ -70,22 +70,34 @@ Browse `https://$APP.azurewebsites.net` and sign in (`admin` / `admin@123` —
 
 ## 4. Configure the dashboard assistant
 
-The floating assistant uses LangChain with an Azure OpenAI chat deployment.
-Create or select an Azure OpenAI resource and deploy a tool-calling chat model,
-then set these values in **App Service → Configuration → Application settings**
-(or with `az webapp config appsettings set`). Keep the API key in the App
-Service setting; never commit it to the repository.
+The floating assistant uses LangChain with the Azure OpenAI v1 endpoint. Managed
+identity is recommended so no model key is stored in the app. For the current
+`gpt-6-astra` deployment:
 
-- `AZURE_OPENAI_API_KEY` — key for the Azure OpenAI resource.
-- `AZURE_OPENAI_API_INSTANCE_NAME` — resource name, without the `.openai.azure.com` suffix.
-- `AZURE_OPENAI_API_DEPLOYMENT_NAME` — exact deployment name created for the chat model.
-- `AZURE_OPENAI_MODEL` — underlying model name, such as `gpt-4o-mini` (optional).
-- `AZURE_OPENAI_API_VERSION` — API version (optional; defaults to `2024-10-21`).
+```bash
+AI_RG=openaiim
+AI_ACCOUNT=54138-molqqca8-swedencentral
+AI_ENDPOINT=https://54138-molqqca8-swedencentral.services.ai.azure.com/openai/v1
+AI_DEPLOYMENT=gpt-6-astra
 
-Save the settings and restart the App Service. The assistant appears for signed-in
-users and stays unavailable until the required key, resource name, and deployment
-name are configured. It can search dashboard records and stage a proposed create,
-update, or delete; the user must review and apply each change.
+az webapp identity assign -g "$RG" -n "$APP"
+PRINCIPAL_ID=$(az webapp identity show -g "$RG" -n "$APP" --query principalId -o tsv)
+AI_RESOURCE_ID=$(az cognitiveservices account show -g "$AI_RG" -n "$AI_ACCOUNT" --query id -o tsv)
+az role assignment create --assignee-object-id "$PRINCIPAL_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --role "Cognitive Services OpenAI User" --scope "$AI_RESOURCE_ID"
+az webapp config appsettings set -g "$RG" -n "$APP" --settings \
+  AZURE_OPENAI_ENDPOINT="$AI_ENDPOINT" \
+  AZURE_OPENAI_DEPLOYMENT_NAME="$AI_DEPLOYMENT" \
+  AZURE_OPENAI_USE_ENTRA_ID=true
+```
+
+Restart the App Service after changing settings. The v1 endpoint does not use an
+API-version setting, so `OPENAI_API_VERSION` may remain empty. Key-based auth is
+also supported with `AZURE_OPENAI_API_KEY`, stored only as an App Service secret.
+Rotate any key shared in chat before using it. The assistant appears for signed-in
+users, searches live dashboard records, and stages create/update/delete proposals;
+the user must review and apply every change.
 
 ## 5. Automated Excel ingestion
 

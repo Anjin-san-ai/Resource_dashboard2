@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { DefaultAzureCredential, getBearerTokenProvider } from '@azure/identity'
 import { AzureChatOpenAI, ChatOpenAI } from '@langchain/openai'
 import { createAgent, tool } from 'langchain'
 import { z } from 'zod'
@@ -214,8 +215,9 @@ function createTools(getState) {
 export function isDashboardAgentConfigured() {
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT || process.env.AZURE_OPENAI_API_INSTANCE_NAME
   const deployment = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+  const hasCredential = process.env.AZURE_OPENAI_USE_ENTRA_ID === 'true' || Boolean(process.env.AZURE_OPENAI_API_KEY)
   return Boolean(
-    process.env.AZURE_OPENAI_API_KEY
+    hasCredential
       && endpoint
       && deployment,
   )
@@ -233,12 +235,15 @@ export function createDashboardAgent(getState) {
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT
         const deployment = process.env.AZURE_OPENAI_DEPLOYMENT_NAME
           || process.env.AZURE_OPENAI_API_DEPLOYMENT_NAME
+        const useEntraId = process.env.AZURE_OPENAI_USE_ENTRA_ID === 'true'
         const model = endpoint
           ? new ChatOpenAI({
             model: deployment,
             temperature: 0,
             maxRetries: 1,
-            apiKey: process.env.AZURE_OPENAI_API_KEY,
+            apiKey: useEntraId
+              ? getBearerTokenProvider(new DefaultAzureCredential(), 'https://ai.azure.com/.default')
+              : process.env.AZURE_OPENAI_API_KEY,
             configuration: { baseURL: `${endpoint.replace(/\/+$/, '')}/` },
           })
           : new AzureChatOpenAI({
