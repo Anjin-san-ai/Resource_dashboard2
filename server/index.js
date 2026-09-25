@@ -371,8 +371,21 @@ app.post('/api/agent/chat', (req, res) => {
   dashboardAgent.respond(messages)
     .then((result) => res.json(result))
     .catch((error) => {
-      console.error('[agent] request failed:', error?.message || 'unknown error')
-      res.status(502).json({ error: 'The assistant could not complete that request. Please try again.' })
+      const apiKey = process.env.AZURE_OPENAI_API_KEY
+      const safeMessage = String(error?.message || 'Unknown assistant error')
+        .replaceAll(apiKey || '\u0000', '[redacted]')
+        .slice(0, 300)
+      const diagnostics = {
+        name: error?.name || 'Error',
+        code: error?.code || null,
+        status: error?.status || null,
+        message: safeMessage,
+      }
+      console.error('[agent] request failed:', JSON.stringify(diagnostics))
+      res.status(502).json({
+        error: 'The assistant could not complete that request. Please try again.',
+        ...(req.user.role === 'admin' ? { diagnostics } : {}),
+      })
     })
 })
 
