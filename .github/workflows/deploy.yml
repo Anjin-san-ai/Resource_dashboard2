@@ -25,26 +25,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      # pnpm is the project's package manager (see README); it also side-steps
-      # the npm reify bug noted in the README.
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
+      # Use npm (not pnpm) here on purpose: npm produces a FLAT node_modules,
+      # which survives the zip-deploy to App Service. pnpm's symlinked
+      # node_modules breaks when zipped/extracted (packages can't be resolved).
       - name: Install dependencies
-        # --no-frozen-lockfile so CI can resolve deps added since the committed
-        # lockfile (e.g. the Azure SDKs) without failing on a lockfile mismatch.
-        run: pnpm install --no-frozen-lockfile
+        run: npm install --no-audit --no-fund
 
       - name: Build SPA
-        run: pnpm build
+        run: npm run build
 
-      # Ship only what the server needs at runtime: server code, built dist/,
-      # package manifests, and production node_modules.
+      # Ship only runtime deps: drop devDependencies (vite, tailwind, esbuild…)
+      # so the deployed package stays lean but self-contained.
       - name: Prune to production dependencies
-        run: pnpm prune --prod
+        run: npm prune --omit=dev
 
       # The deploy step is skipped until Azure is configured: set the repo
       # variable AZURE_WEBAPP_NAME and the AZURE_WEBAPP_PUBLISH_PROFILE secret
